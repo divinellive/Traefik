@@ -1,0 +1,131 @@
+# STATIC CONFIGURATION. CHANGES MADE AND SAVED IN THIS SECTION REQUIRES A RESTART OF TRAEFIK TO LOAD.
+# ===================================================================================================
+
+# TRAEFIK CONFIGURATION
+global:
+  checkNewVersion: true
+  sendAnonymousUsage: false # true by default
+
+# (Optional) Log information
+log:
+  level: INFO # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  # format: common # common, json, logfmt
+  filePath: /var/log/traefik/traefik.log
+
+# (Optional) Accesslog
+accesslog:
+  format: common # common, json, logfmt
+  filePath: /var/log/traefik/access.log
+  bufferingSize: 100
+
+# (Optional) Enable Api and Dashboard
+api: # access this on port 8080
+  dashboard: true # true by default
+#   insecure: true # Don't do this in production
+
+# Entry Points configurations
+entryPoints:
+  metrics: # Entry point used to expose metrics, Optional, Default=traefik
+    address: ":8082"
+  api:
+    address: ":8080"
+  web:
+    address: ":80" # same as 0.0.0.0:80 meaning all interfaces
+
+metrics: # access metrics on "http://localhost:8082/metrics"
+  prometheus:
+    entryPoint: "metrics"
+    addEntryPointsLabels: true # Enable metrics on entry points. Optional, Default=true
+    # addRoutersLabels: true # Enable metrics on routers. Optional, Default=false
+    addServicesLabels: true # Enable metrics on services. Optional, Default=true
+    # manualRouting: true # If manualRouting is true, it disables the default internal router in order to allow one to create a custom router for the prometheus@internal service. Optional, Default=false
+    # buckets:
+    #   - 0.1
+    #   - 0.3
+    #   - 1.2
+    #   - 5.0
+    # headerLabels: # rename headers fields in the metrics
+    #   useragent: User-Agent # User-Agent becomes useragent
+
+
+# load dynamic configuration from here
+providers:
+  file:
+    filename: "/etc/traefik/dynamic_traefik.yml" # load dynamic config from this same file
+    watch: true # means watch and update whenever ./traefik.yaml file changes
+
+
+# THE DYNAMIC CONFIGURATION. CHANGES MADE AND SAVED IN THIS SECTION WOULD BE REFLECTED IN REALTIME
+# ================================================================================================
+# ROUTERS, MIDDLEWARES, SERVICES, CERTIFICATES
+http:
+  routers:
+#     to-backend:
+#       entryPoints:
+#         - "web"
+#       # By default, routers listen to every entry points if entryPoints is not defined
+#       rule: "Host(`127.0.0.1`) || Host(`localhost`)"
+#       service: backend_normal
+
+    to-dashboard:
+      entryPoints:
+        - "api"
+      rule: "Host(`127.0.0.1`) || Host(`localhost`)"
+      service: "api@internal"
+      middlewares:
+        - "dashboard-auth"
+
+    metrics-router:
+      entryPoints:
+        - "metrics"
+      rule: "Host(`127.0.0.1`) || Host(`localhost`)"
+      service: "prometheus@internal"
+
+#   services:
+#     # NORMAL LOAD BALANCING
+#     backend_normal:
+#       loadBalancer:
+#         servers:
+#         - url: "http://whoami:80"
+#         - url: "http://whoami:80"
+    # WEIGHTED ROUND ROBIN LOAD BALANCING
+    # backend_wrr:
+    #   weighted:
+    #     services:
+    #       - name: backend1
+    #         weight: 4
+    #       - name: backend2
+    #         weight: 1
+    # backend1:
+    #   loadBalancer:
+    #     servers:
+    #     - url: 'http://localhost:8001'
+    # backend2:
+    #   loadBalancer:
+    #     servers:
+    #     - url: 'http://localhost:8002'
+
+  # # DEFINE BASIC AUTHENTICATION MIDDLEWARE FOR TRAEFIK DASHBOARD. 
+  # middlewares:
+  #   dashboard-auth:
+  #     basicAuth:
+  #       users:
+  #         - "admin:$apr1$p0V/ENyg$o37lu7fpvpYcsjHCNFxKb."  # generate credentials and add it here with command => "htpasswd -c .htpasswd admin"
+    
+    # ALLOW ONLY LISTED IP ADDRESSES TO BE FORWARDED TO A SERVICE
+    # ipWhiteList-a:
+    #   ipWhiteList:
+    #     sourceRange:
+    #       - "127.0.0.129/25" # from
+    #       - "192.168.1.7"  # to
+
+    # APPEND TO REQUEST AND RESPONSE HEADERS
+    # appendHeader:
+    #   headers:
+    #     customRequestHeaders:
+    #       X-Script-Name: "test" # define custom request key: value here
+    #     customResponseHeaders:
+    #       X-Custom-Response-Header: "value" # define custom response key: value here
+
+
+    # start traefik with this command => `traefik --configfile=traefik.yml`

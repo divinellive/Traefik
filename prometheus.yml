@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 2s # the intervals between which prometheus checks/fetches new metrics.
+
+scrape_configs:
+  - job_name: 'traefik'
+    # scrape_interval: 10s
+    static_configs:
+      - targets: ['192.168.8.160:8082'] # host/machine(ip address) and port where the metrics would be retrieved from.

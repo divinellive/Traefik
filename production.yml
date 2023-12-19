@@ -1,0 +1,65 @@
+version: '3.8'
+
+
+volumes:
+  traefik_data: {}
+  prometheus_data: {}
+  grafana_data: {}
+  access_log_data: {}
+
+
+services:
+# visit dashboard http://localhost:8080/dashboard/#/
+# visit metrics http://localhost:8082/metrics
+  traefik:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    image: traefik_image
+    volumes:
+      - traefik_data:/etc/traefik/acme:z
+      - access_log_data:/var/log/traefik:z
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:8080:8080"
+      - "0.0.0.0:8082:8082"
+
+
+# visit http://localhost:9090/targets
+  prometheus:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.prometheus
+    image: prometheus_image
+    container_name: prometheus_container
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml # create prometheus.yml in current directory
+      - prometheus_data:/prometheus
+    command:
+      - '--web.enable-lifecycle' # enables the reloading/updating of prometheus config on the fly
+      - '--config.file=/etc/prometheus/prometheus.yml' # points to config file in container. required if "--web.enable-lifecycle" is set
+      # curl -X POST localhost:9090/-/reload =>  this would reload/refresh prometheus config after making changes to it. OR you can rebuild the containers
+      # http://localhost:9090/status  => check in browser if config reload was successful.
+
+
+  # visit http://localhost:3000/login 
+  grafana: # default => username: admin | password: admin
+      image: grafana/grafana:latest
+      container_name: grafana_container
+      ports:
+        - "3000:3000"
+      restart: unless-stopped
+      volumes:
+        - grafana_data:/var/lib/grafana
+  # visit http://localhost:3000/login 
+  # visit https://grafana.com/grafana/dashboards/ to browes and chose a prefered dashboards for data visualization. pick the ID
+
+
+  whoami: # testing services that provide container/sysmtem/request information
+    # A container that exposes an API to show its IP address
+    image: traefik/whoami
+    labels:
+      - "traefik.http.routers.whoami.rule=Host(`whoami.docker.localhost`)"

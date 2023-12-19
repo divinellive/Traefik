@@ -1,0 +1,31 @@
+# THE DYNAMIC CONFIGURATION. CHANGES MADE AND SAVED IN THIS SECTION WOULD BE REFLECTED IN REALTIME
+# ================================================================================================
+# ROUTERS, MIDDLEWARES, SERVICES, CERTIFICATES
+http:
+  routers:
+    backend-router:
+      entryPoints: # By default, routers listen to every entry points if entryPoints is not defined
+        - "web"
+      rule: "Host(`127.0.0.1`) || Host(`localhost`)"
+      service: backend_service
+
+    dashboard-router:
+      entryPoints:
+        - "api"
+      rule: "Host(`127.0.0.1`) || Host(`localhost`)"
+      service: "api@internal"
+      middlewares:
+        - "dashboard-auth"
+
+  services:
+    backend_service: # NORMAL LOAD BALANCING
+      loadBalancer:
+        servers:
+        - url: "http://whoami:80"
+        - url: "http://whoami:80"
+
+  middlewares:
+    dashboard-auth: # DEFINE BASIC AUTHENTICATION MIDDLEWARE FOR TRAEFIK DASHBOARD. 
+      basicAuth:
+        users:
+          - "admin:$apr1$p0V/ENyg$o37lu7fpvpYcsjHCNFxKb." 
